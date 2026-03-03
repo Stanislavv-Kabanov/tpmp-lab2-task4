@@ -1,0 +1,20 @@
+name: C Build
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Build with Make
+      run: make
+      
+    - name: Run the program
+      run: ./bin/military_program
+      
+    - name: Show output
+      run: cat data/output.txt || echo "output.txt not created yet"
