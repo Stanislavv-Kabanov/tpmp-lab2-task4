@@ -1,70 +1,116 @@
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <stdlib.h>
 #include "file_processor.h"
 
-int is_large_population(const State *s) {
-    return s->population > 20;
+int parse_line(char *line, Record *record) {
+    int field = 0;
+    char *token = strtok(line, ";");
+    
+    while (token != NULL && field < MAX_FIELDS) {
+        strncpy(record->fields[field], token, MAX_STRING_LEN - 1);
+        record->fields[field][MAX_STRING_LEN - 1] = '\0';
+        field++;
+        token = strtok(NULL, ";");
+    }
+    
+    return field;
 }
 
-void print_state(const State *s, FILE *out) {
-    fprintf(out, "=====================================\n");
-    fprintf(out, "Страна: %s\n", s->country);
-    fprintf(out, "Столица: %s\n", s->capital);
-    fprintf(out, "Язык: %s\n", s->language);
-    fprintf(out, "Население: %d млн\n", s->population);
-    fprintf(out, "Площадь: %.1f тыс. км²\n", s->area);
-    fprintf(out, "Валюта: %s\n", s->currency);
-    fprintf(out, "Гос. строй: %s\n", s->government);
-    fprintf(out, "Глава: %s\n", s->head);
+int is_vaz(const Record *record) {
+    const char *mark = record->fields[12];
+    return (strcmp(mark, "ВАЗ") == 0);
+}
+
+void write_header(FILE *out) {
+    fprintf(out, "Фамилия;Имя;Отчество;Телефон;Индекс;Страна;Область;Район;Город;Улица;Дом;Квартира;Марка;НомерАвто;НомерТехпаспорта\n");
+}
+
+void write_record(FILE *out, const Record *record) {
+    for (int i = 0; i < MAX_FIELDS; i++) {
+        fprintf(out, "%s", record->fields[i]);
+        if (i < MAX_FIELDS - 1) {
+            fprintf(out, ";");
+        }
+    }
+    fprintf(out, "\n");
 }
 
 void process_file(const char *input_file, const char *output_file) {
     FILE *in = fopen(input_file, "r");
     if (!in) {
-        printf("Error: Cannot open input file %s\n", input_file);
+        printf("ОШИБКА: Не удалось открыть файл %s\n", input_file);
         return;
     }
     
+    fseek(in, 0, SEEK_END);
+    long size = ftell(in);
+    if (size == 0) {
+        printf("ОШИБКА: Файл пуст\n");
+        fclose(in);
+        return;
+    }
+    rewind(in);
+    
     FILE *out = fopen(output_file, "w");
     if (!out) {
-        printf("Error: Cannot create output file %s\n", output_file);
+        printf("ОШИБКА: Не удалось создать файл %s\n", output_file);
         fclose(in);
         return;
     }
     
-    State states[100];  
-    int count = 0;
-    int large_count = 0;
+    char line[1024];
+    int line_num = 0;
+    int vaz_count = 0;
+    Record record;
     
-    fprintf(out, "ГОСУДАРСТВА С НАСЕЛЕНИЕМ БОЛЕЕ 20 МЛН ЧЕЛОВЕК\n");
-    fprintf(out, "=============================================\n\n");
-    
-    while (fscanf(in, "%s %s %s %d %f %s %s %s", 
-                  states[count].country,
-                  states[count].capital,
-                  states[count].language,
-                  &states[count].population,
-                  &states[count].area,
-                  states[count].currency,
-                  states[count].government,
-                  states[count].head) == 8) {
-        
-        if (is_large_population(&states[count])) {
-            print_state(&states[count], out);
-            large_count++;
+    if (fgets(line, sizeof(line), in)) {
+        line[strcspn(line, "\n")] = 0;
+        int fields = parse_line(line, &record);
+        if (fields == EXPECTED_FIELDS) {
+            write_header(out);
+        } else {
+            printf("ПРЕДУПРЕЖДЕНИЕ: Заголовок содержит %d полей (ожидалось %d)\n", 
+                   fields, EXPECTED_FIELDS);
+            write_header(out);
         }
-        
-        count++;
+        line_num++;
     }
     
-    fprintf(out, "\n=====================================\n");
-    fprintf(out, "Всего государств: %d\n", count);
-    fprintf(out, "Государств с населением > 20 млн: %d\n", large_count);
+    while (fgets(line, sizeof(line), in)) {
+        line_num++;
+        line[strcspn(line, "\n")] = 0;
+        
+        if (strlen(line) == 0) {
+            printf("ПРЕДУПРЕЖДЕНИЕ: Строка %d пустая\n", line_num);
+            continue;
+        }
+        
+        int fields = parse_line(line, &record);
+        
+        if (strlen(record.fields[0]) == 0) {
+            printf("ПРЕДУПРЕЖДЕНИЕ: Строка %d содержит некорректные данные.\n", line_num);
+            continue;
+        }
+        
+        if (fields != EXPECTED_FIELDS) {
+            printf("ПРЕДУПРЕЖДЕНИЕ: Строка %d содержит %d полей (ожидалось %d).\n", 
+                   line_num, fields, EXPECTED_FIELDS);
+            continue;
+        }
+        
+        if (is_vaz(&record)) {
+            write_record(out, &record);
+            vaz_count++;
+        }
+    }
     
-    printf("Прочитано %d государств\n", count);
-    printf("Найдено %d государств с населением > 20 млн\n", large_count);
-    printf("Результаты сохранены в %s\n", output_file);
+    if (vaz_count == 0) {
+        printf("Автомобилей марки ВАЗ не найдено\n");
+        fprintf(out, "Автомобилей марки ВАЗ не найдено\n");
+    } else {
+        printf("Найдено автомобилей ВАЗ: %d\n", vaz_count);
+    }
     
     fclose(in);
     fclose(out);

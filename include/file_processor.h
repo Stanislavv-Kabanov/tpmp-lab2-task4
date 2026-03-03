@@ -1,20 +1,18 @@
 #ifndef FILE_PROCESSOR_H
 #define FILE_PROCESSOR_H
 
-typedef struct {
-    char country[100];        
-    char capital[100];         
-    char language[50];         
-    int population;            
-    float area;               
-    char currency[50];         
-    char government[100];      
-    char head[100];            
-} State;
+#define MAX_FIELDS 15
+#define MAX_STRING_LEN 100
+#define EXPECTED_FIELDS 15
 
+typedef struct {
+    char fields[MAX_FIELDS][MAX_STRING_LEN];
+} Record;
 
 void process_file(const char *input_file, const char *output_file);
-void print_state(const State *s, FILE *out);
-int is_large_population(const State *s);
+int parse_line(char *line, Record *record);
+int is_vaz(const Record *record);
+void write_record(FILE *out, const Record *record);
+void write_header(FILE *out);
 
 #endif

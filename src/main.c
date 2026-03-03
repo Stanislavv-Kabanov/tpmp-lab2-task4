@@ -2,8 +2,8 @@
 #include "file_processor.h"
 
 int main() {
-    printf("=== Программа обработки данных военнослужащих ===\n");
-    printf("Фильтрация: звание 'лейтенант'\n\n");
+    printf("=== Программа обработки данных владельцев автомобилей ===\n");
+    printf("Фильтрация: марка автомобиля 'ВАЗ'\n\n");
     
     process_file("data/input.txt", "data/output.txt");
     
