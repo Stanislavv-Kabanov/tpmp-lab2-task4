@@ -17,4 +17,4 @@ jobs:
       run: ./bin/military_program
       
     - name: Show output
-      run: cat data/output.txt
+      run: cat data/output.txt || echo "output.txt not created yet"

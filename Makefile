@@ -11,7 +11,7 @@ DOCS_DIR = docs
 
 SOURCES = $(wildcard $(SRC_DIR)/*.c)
 OBJECTS = $(SOURCES:$(SRC_DIR)/%.c=$(OBJ_DIR)/%.o)
-TARGET = $(BIN_DIR)/program
+TARGET = $(BIN_DIR)/military_program
 
 .PHONY: all clean debug run test help
 
